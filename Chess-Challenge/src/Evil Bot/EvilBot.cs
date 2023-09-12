@@ -9,46 +9,69 @@ namespace ChessChallenge.Example
     {
         // Piece values: null, pawn, knight, bishop, rook, queen, king
         int[] pieceValues = { 0, 100, 300, 300, 500, 900, 10000 };
-
+        Random rng = new();
         public Move Think(Board board, Timer timer)
         {
-            Move[] allMoves = board.GetLegalMoves();
-
-            // Pick a random move to play if nothing better is found
-            Random rng = new();
-            Move moveToPlay = allMoves[rng.Next(allMoves.Length)];
-            int highestValueCapture = 0;
-
-            foreach (Move move in allMoves)
+            Move[] moves = board.GetLegalMoves();
+            Move moveToPlay = moves[rng.Next(moves.Length)];
+            int highestValue = 0;
+            foreach (Move move in moves)
             {
-                // Always play checkmate in one
-                if (MoveIsCheckmate(board, move))
+                board.MakeMove(move);
+                if (board.IsInCheckmate())
                 {
-                    moveToPlay = move;
-                    break;
+                    return move;
                 }
+                int Value = -Search(board, 2);
 
-                // Find highest value capture
-                Piece capturedPiece = board.GetPiece(move.TargetSquare);
-                int capturedPieceValue = pieceValues[(int)capturedPiece.PieceType];
-
-                if (capturedPieceValue > highestValueCapture)
+                if (Value > highestValue)
                 {
+                    highestValue = Value;
                     moveToPlay = move;
-                    highestValueCapture = capturedPieceValue;
                 }
+                board.UndoMove(move);
             }
-
             return moveToPlay;
         }
-
-        // Test if this move gives checkmate
-        bool MoveIsCheckmate(Board board, Move move)
+        int Search(Board board, int iteration)
         {
-            board.MakeMove(move);
-            bool isMate = board.IsInCheckmate();
-            board.UndoMove(move);
-            return isMate;
+            Move[] moves = board.GetLegalMoves();
+
+            if (iteration == 0)
+            {
+                return CountMaterial(board);
+            }
+
+            int HighestValue = int.MinValue;
+            if (moves.Length == 0)
+            {
+                if (board.IsInCheck())
+                {
+                    return int.MinValue;
+                }
+                return 0;
+            }
+            foreach (Move move in moves)
+            {
+                // Find highest value capture
+                board.MakeMove(move);
+                int Value = -Search(board, iteration - 1);
+                board.UndoMove(move);
+                HighestValue = Math.Max(HighestValue, Value);
+            }
+
+            return HighestValue;
+        }
+        int CountMaterial(Board board)
+        {
+            bool side = board.IsWhiteToMove;
+            int Material = 0;
+            for (int i = 0; i < 64; i += 1)
+            {
+                Piece a = board.GetPiece(new Square(i));
+                Material += pieceValues[(int)a.PieceType] * (a.IsWhite ? 1 : -1) * (side ? 1 : -1);
+            }
+            return Material;
         }
     }
 }

@@ -7,4 +7,6 @@ public class MyBot : IChessBot
     {
         return board.GetLegalMoves()[Rng.Next(board.GetLegalMoves().Length)];
     }
+    
 }
+
